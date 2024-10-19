@@ -1,0 +1,2 @@
+backend/models/faster_rcnn_model.pth filter=lfs diff=lfs merge=lfs -text
+backend/models/retinanet_model.pth filter=lfs diff=lfs merge=lfs -text
