@@ -1,122 +1,221 @@
 import React, { useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import axios from 'axios';  // Make sure axios is installed in your frontend project
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; 
 
 const CaptureImage = () => {
+  const [boxCode, setBoxCode] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
-  const [selectedOption, setSelectedOption] = useState("packed"); // Default option
-  const [isNewBox, setIsNewBox] = useState(false); // To track if "New Box" is selected
-  const [totalObjects, setTotalObjects] = useState(null); // To store detected object count
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [step, setStep] = useState(0);
+  const [ocrOutput, setOcrOutput] = useState('');
+  const [totalObjects, setTotalObjects] = useState(null);
+  const [fruitData, setFruitData] = useState(null);
   const webcamRef = React.useRef(null);
+  const navigate = useNavigate();
+  const API_URL = process.env.REACT_APP_API_URL;
 
-  // Function to capture the image
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
     setImageSrc(imageSrc);
 
-    if (isNewBox) {
-      alert("Capture the full cart image"); // Prompt to capture the full cart
-      sendImageToBackend(imageSrc); // Send to backend for detection
-    } else if (selectedOption === "packed") {
-      sendImageToBackend(imageSrc); // Send packed item image to backend
-    } else {
-      sendImageToBackend(imageSrc); // Send fruit/vegetable image to backend
+    if (step === 2) {
+      // Full cart detection
+      sendFullCartImageToBackend(imageSrc);
+    } else if (step === 4 && selectedOption === 'packed') {
+      // Front-side detection for packed item
+      sendFrontImageToBackend(imageSrc);
+    } else if (step === 5 && selectedOption === 'packed') {
+      // Back-side detection for packed item
+      sendBackImageToBackend(imageSrc);
+    } else if (step === 4 && selectedOption === 'fruits') {
+      // Fruits/vegetables detection
+      sendFruitImageToBackend(imageSrc);
     }
-  }, [webcamRef, isNewBox, selectedOption]);
+  }, [webcamRef, step, selectedOption]);
 
-  const sendImageToBackend = async (imageSrc) => {
+  const sendFullCartImageToBackend = async (imageSrc) => {
     try {
-      // Convert the base64 image to a blob and form data
       const blob = await fetch(imageSrc).then((res) => res.blob());
       const formData = new FormData();
-      formData.append("file", blob, "captured_image.jpg");
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
 
-      // Send the image to the backend Flask route
-      const response = await axios.post("http://127.0.0.1:5000/detect_objects", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await axios.post(`${API_URL}/detect_objects`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      // Handle the response (Total objects detected)
       setTotalObjects(response.data.total_objects);
+      setStep(3); // Proceed to select option (packed item or fruit)
     } catch (error) {
-      console.error("Error sending image to backend:", error);
+      console.error('Error detecting objects in full cart:', error);
+      alert('Failed to process the image. Please try again.');
     }
   };
 
-  // Handle radio button selection for fruits/vegetables/packed item
+  const sendFrontImageToBackend = async (imageSrc) => {
+    try {
+        const blob = await fetch(imageSrc).then((res) => res.blob());
+        const formData = new FormData();
+        formData.append('file', blob, 'captured_image.jpg');
+        formData.append('boxCode', boxCode);
+
+        const response = await axios.post(`${API_URL}/detect_front_side`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        // Filter out "No text detected" from the response
+        const filteredTexts = response.data.detected_texts.filter(text => text !== "No text detected");
+        setOcrOutput(filteredTexts.join('\n'));
+        setStep(5); // Proceed to capture back image
+    } catch (error) {
+        console.error('Error sending front-side image to backend:', error);
+        alert('Failed to process the image. Please try again.');
+    }
+};
+
+
+  const sendBackImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_back_side`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setOcrOutput(response.data.analyzed_text);
+      setStep(3); // Return to choose packed item or fruit
+    } catch (error) {
+      console.error('Error sending back-side image to backend:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
+
+  const sendFruitImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_fruit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setFruitData(response.data);
+      alert(`Detected: ${response.data.produce_type}, Freshness: ${response.data.freshness}, Shelf Life: ${response.data.shelf_life}`);
+      setStep(3); // Return to choose packed item or fruit
+    } catch (error) {
+      console.error('Error detecting fruit/vegetable:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
+
   const handleOptionChange = (event) => {
     setSelectedOption(event.target.value);
-    if (event.target.value === "newBox") {
-      setIsNewBox(true); // If "New Box" is selected, show prompt for full cart
+    setStep(4); // Proceed to capture front image
+  };
+
+  const handleStart = () => {
+    if (boxCode) {
+      setStep(2); // Proceed to capture full cart image
     } else {
-      setIsNewBox(false); // Reset if not "New Box"
+      alert('Please enter a valid Box Code.');
     }
+  };
+
+  const handleNewBox = () => {
+    // Reset the state to start a new process
+    setBoxCode('');
+    setImageSrc(null);
+    setSelectedOption(null);
+    setStep(0);
+    setOcrOutput('');
+    setTotalObjects(null);
+    setFruitData(null);
   };
 
   return (
     <div className="flex flex-col items-center p-6">
-      {/* Webcam Component */}
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        screenshotFormat="image/jpeg"
-        width={320}
-        height={240}
-        className="border rounded-lg shadow-lg"
-      />
-
-      {/* Capture Button */}
-      <button 
-        className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
-        onClick={capture}
-      >
-        Capture Image
-      </button>
-
-      {/* Radio buttons for options */}
-      <div className="mt-4">
-        <label className="block">
-          <input
-            type="radio"
-            value="packed"
-            checked={selectedOption === "packed"}
-            onChange={handleOptionChange}
-          />
-          Packed Item (Default)
-        </label>
-
-        <label className="block">
-          <input
-            type="radio"
-            value="fruits"
-            checked={selectedOption === "fruits"}
-            onChange={handleOptionChange}
-          />
-          Fruits
-        </label>
-
-        <label className="block">
-          <input
-            type="radio"
-            value="vegetables"
-            checked={selectedOption === "vegetables"}
-            onChange={handleOptionChange}
-          />
-          Vegetables
-        </label>
-
-        <label className="block">
-          <input
-            type="radio"
-            value="newBox"
-            checked={selectedOption === "newBox"}
-            onChange={handleOptionChange}
-          />
-          New Box (Capture Full Cart)
-        </label>
+      <div className="flex justify-between w-full mb-4">
+        <button
+          className="bg-gray-500 text-white px-4 py-2 rounded"
+          onClick={() => navigate('/')}
+        >
+          Home
+        </button>
+        <button
+          className="bg-red-500 text-white px-4 py-2 rounded"
+          onClick={handleNewBox}
+        >
+          New Box
+        </button>
       </div>
 
-      {/* Display the captured image */}
+      {step === 0 && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Enter Box Code"
+            value={boxCode}
+            onChange={(e) => setBoxCode(e.target.value)}
+            className="p-2 border rounded"
+          />
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
+            onClick={handleStart}
+          >
+            Start
+          </button>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="mt-4">
+          <label className="block">
+            <input
+              type="radio"
+              value="packed"
+              checked={selectedOption === 'packed'}
+              onChange={handleOptionChange}
+            />
+            Packed Item
+          </label>
+
+          <label className="block">
+            <input
+              type="radio"
+              value="fruits"
+              checked={selectedOption === 'fruits'}
+              onChange={handleOptionChange}
+            />
+            Fruits/Vegetables
+          </label>
+        </div>
+      )}
+
+      {step > 1 && (
+        <>
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            width={320}
+            height={240}
+            className="border rounded-lg shadow-lg"
+          />
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+            onClick={capture}
+          >
+            Capture Image
+          </button>
+        </>
+      )}
+
       {imageSrc && (
         <div className="mt-4">
           <h2 className="text-lg">Captured Image</h2>
@@ -124,14 +223,22 @@ const CaptureImage = () => {
         </div>
       )}
 
-      {/* Display the total number of detected objects */}
-      {totalObjects !== null && (
+      {ocrOutput && (
         <div className="mt-4">
-          <h2 className="text-lg">Total Objects Detected: {totalObjects}</h2>
+          <h2 className="text-lg">Edit OCR Output</h2>
+          <textarea
+            className="p-2 border rounded w-full"
+            value={ocrOutput}
+            onChange={(e) => setOcrOutput(e.target.value)}
+          />
+          <button
+            className="bg-green-500 text-white px-4 py-2 rounded mt-2"
+          >
+            Submit OCR Data
+          </button>
         </div>
       )}
     </div>
   );
 };
-
 export default CaptureImage;

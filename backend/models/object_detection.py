@@ -5,11 +5,13 @@ import cv2
 import numpy as np
 from torchvision.transforms import functional as F
 from ensemble_boxes import weighted_boxes_fusion
+from models_path import FASTER_RCNN_PATH
+from models_path import RETINANET_PATH
 
 def load_models():
     # Paths to the saved model weights
-    faster_rcnn_path = r"C:\Users\tanya\OneDrive\Pictures\web_app\backend\models\faster_rcnn_model.pth"
-    retinanet_path = r"C:\Users\tanya\OneDrive\Pictures\web_app\backend\models\retinanet_model.pth"
+    faster_rcnn_path = FASTER_RCNN_PATH
+    retinanet_path = RETINANET_PATH
 
     # Load Faster R-CNN model architecture without downloading weights
     faster_rcnn = fasterrcnn_resnet50_fpn(weights=None).eval()
@@ -62,4 +64,8 @@ def detect_objects(img_path):
     # Denormalize boxes after WBF
     boxes_wbf = np.array(boxes_wbf) * [width, height, width, height]
 
-    return boxes_wbf, len(boxes_wbf)  # Return the bounding boxes and total number of objects
+    return {
+    'boxes': boxes_wbf.tolist(),
+    'total_objects': len(boxes_wbf)
+    }
+

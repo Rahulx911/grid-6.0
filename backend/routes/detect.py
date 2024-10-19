@@ -1,8 +1,7 @@
-# routes/detect.py
-
 from flask import Blueprint, request, jsonify
 from models.object_detection import detect_objects
 import os
+from werkzeug.utils import secure_filename
 
 # Create a blueprint for the route
 detect_objects_blueprint = Blueprint('detect_objects', __name__)
@@ -16,8 +15,10 @@ def detect():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
+    # Secure the uploaded file name
     file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(file_path)
 
     # Run object detection model

@@ -1,0 +1,18 @@
+
+backend/static/uploads/
+backend/yolov5/runs/
+backend/yolov5/weights/
+backend/models/faster_rcnn_model.pth
+backend/models/fruits_detect.keras
+backend/models/OCR_back_side.pth
+backend/models/retinanet_model.pth
+
+# SQLite database
+*.db
+*.sqlite3
+
+backend/config.py
+
+
+backend/.env
+frontend/.env
