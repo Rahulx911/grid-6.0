@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+
+# Environment variables file
+.env
+
+# Static files
+static/uploads/
+
+# Other files to ignore
+*.db
