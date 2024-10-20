@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Report = () => {
-  const [boxes, setBoxes] = useState([]); // List of boxes
-  const [selectedBox, setSelectedBox] = useState(null); // Selected box for viewing details
-  const [items, setItems] = useState([]); // List of items for the selected box
-  const [totalObjects, setTotalObjects] = useState(null); // Total objects detected for the selected box
+  const [boxes, setBoxes] = useState([]);
+  const [selectedBox, setSelectedBox] = useState(null);
+  const [items, setItems] = useState([]);
+  const [totalObjects, setTotalObjects] = useState(null);
   const API_URL = process.env.REACT_APP_API_URL;
 
-
-  // Fetch the list of boxes from the backend
   useEffect(() => {
     const fetchBoxes = async () => {
       try {
@@ -23,7 +21,6 @@ const Report = () => {
     fetchBoxes();
   }, []);
 
-  // Fetch the details of the selected box
   const fetchBoxDetails = async (boxCode) => {
     try {
       const response = await axios.get(`${API_URL}/get_box_details/${boxCode}`);
@@ -38,8 +35,6 @@ const Report = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Report</h1>
-
-      {/* Display list of boxes */}
       {!selectedBox && (
         <div className="mb-4">
           <h2 className="text-xl font-semibold">Boxes</h2>
@@ -57,33 +52,38 @@ const Report = () => {
           </div>
         </div>
       )}
-
-      {/* Display selected box details */}
       {selectedBox && (
         <div>
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-            onClick={() => setSelectedBox(null)} // Go back to the box list
+            onClick={() => setSelectedBox(null)}
           >
             Back to Boxes
           </button>
           <h2 className="text-xl font-semibold mb-2">Box {selectedBox}</h2>
           <p className="mb-4">Total Objects Detected: {totalObjects}</p>
-
           <table className="min-w-full bg-white">
             <thead>
               <tr>
                 <th className="py-2">S.No</th>
+                <th className="py-2">Item Type</th>
                 <th className="py-2">Front Side Data</th>
                 <th className="py-2">Back Side Data</th>
+                <th className="py-2">Produce Type</th>
+                <th className="py-2">Freshness</th>
+                <th className="py-2">Shelf Life</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, index) => (
                 <tr key={item.item_id} className="border-t">
                   <td className="py-2">{index + 1}</td>
-                  <td className="py-2">{item.front_data}</td>
-                  <td className="py-2">{item.back_data}</td>
+                  <td className="py-2">{item.item_type}</td>
+                  <td className="py-2">{item.front_data || 'N/A'}</td>
+                  <td className="py-2">{item.back_data || 'N/A'}</td>
+                  <td className="py-2">{item.produce_type || 'N/A'}</td>
+                  <td className="py-2">{item.freshness || 'N/A'}</td>
+                  <td className="py-2">{item.shelf_life || 'N/A'}</td>
                 </tr>
               ))}
             </tbody>

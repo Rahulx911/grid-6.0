@@ -1,3 +1,4 @@
+# report.py
 from flask import Blueprint, jsonify
 from models.database import db, Box, Item
 
@@ -19,8 +20,12 @@ def get_box_details(box_code):
     item_list = [
         {
             'item_id': item.item_id,
+            'item_type': item.item_type,
             'front_data': item.front_data,
-            'back_data': item.back_data
+            'back_data': item.back_data,
+            'produce_type': item.produce_type,
+            'freshness': item.freshness,
+            'shelf_life': item.shelf_life
         } for item in items
     ]
 

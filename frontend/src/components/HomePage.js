@@ -10,7 +10,7 @@ const HomePage = () => {
       <div className="space-y-6">
         <button 
           className="bg-blue-500 text-white px-4 py-2 rounded"
-          onClick={() => navigate('/capture')}
+          onClick={() => navigate('/enter-box-code')}
         >
           Capture Image
         </button>

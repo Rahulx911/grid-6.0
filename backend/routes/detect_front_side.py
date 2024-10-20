@@ -1,9 +1,5 @@
 import pathlib
-
-# Save the original PosixPath
 temp = pathlib.PosixPath
-
-# Redirect PosixPath to WindowsPath
 pathlib.PosixPath = pathlib.WindowsPath
 
 import subprocess
