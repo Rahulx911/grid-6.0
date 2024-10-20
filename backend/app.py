@@ -8,7 +8,7 @@ from routes.detect_back_side import detect_back_side_blueprint
 from routes.fruits_detect import fruit_detection_blueprint
 from routes.save_fruit_data import detect_objects_savefruit_blueprint
 from routes.detect_front_side import detect_front_side_blueprint
-from backend.routes.report import report_blueprint
+from routes.report import report_blueprint
 
 app = Flask(__name__)
 app.config.from_object(Config)
