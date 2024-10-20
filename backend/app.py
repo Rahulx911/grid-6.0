@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from backend.models.database import db
-from config import Config
+from backend.config import Config
 from routes.detect import detect_objects_blueprint
 from routes.detect_back_side import detect_back_side_blueprint
 from routes.fruits_detect import fruit_detection_blueprint
