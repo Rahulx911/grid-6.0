@@ -6,7 +6,7 @@ import tensorflow as tf
 from PIL import Image
 import os
 from werkzeug.utils import secure_filename
-from backend.models_path import FRUITS
+from models_path import FRUITS
 
 
 # Load the pre-trained model

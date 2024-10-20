@@ -1,7 +1,7 @@
 # routes/detect.py
 
 from flask import Blueprint, request, jsonify
-from backend.models.database import db, Box, Item
+from models.database import db, Box, Item
 
 detect_objects_savefruit_blueprint = Blueprint('detect_objects', __name__)
 

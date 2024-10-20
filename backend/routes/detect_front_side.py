@@ -13,7 +13,7 @@ import cv2
 import easyocr
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
-from backend.models_path import YOLO_WEIGHTS_PATH
+from models_path import YOLO_WEIGHTS_PATH
 from werkzeug.utils import secure_filename
 from pathlib import Path, PureWindowsPath
 

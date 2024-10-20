@@ -1,12 +1,12 @@
 import os
 from flask import Flask
-from backend.models.database import db
-from backend.config import Config
-from backend.routes.detect import detect_objects_blueprint
-from backend.routes.detect_back_side import detect_back_side_blueprint
-from backend.routes.fruits_detect import fruit_detection_blueprint
-from backend.routes.save_fruit_data import detect_objects_savefruit_blueprint
-from backend.routes.detect_front_side import detect_front_side_blueprint
+from models.database import db
+from config import Config
+from routes.detect import detect_objects_blueprint
+from routes.detect_back_side import detect_back_side_blueprint
+from routes.fruits_detect import fruit_detection_blueprint
+from routes.save_fruit_data import detect_objects_savefruit_blueprint
+from routes.detect_front_side import detect_front_side_blueprint
 from backend.routes.report import report_blueprint
 
 app = Flask(__name__)

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from backend.models.database import db, Box, Item
+from models.database import db, Box, Item
 import os
 import torch
 import torchvision

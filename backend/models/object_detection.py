@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 from torchvision.transforms import functional as F
 from ensemble_boxes import weighted_boxes_fusion
-from backend.models_path import FASTER_RCNN_PATH
-from backend.models_path import RETINANET_PATH
+from models_path import FASTER_RCNN_PATH
+from models_path import RETINANET_PATH
 
 def load_models():
     # Paths to the saved model weights
