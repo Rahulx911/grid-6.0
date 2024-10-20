@@ -20,17 +20,100 @@ const CaptureImage = () => {
     setImageSrc(imageSrc);
 
     if (step === 2) {
+      // Full cart detection
       sendFullCartImageToBackend(imageSrc);
     } else if (step === 4 && selectedOption === 'packed') {
+      // Front-side detection for packed item
       sendFrontImageToBackend(imageSrc);
     } else if (step === 5 && selectedOption === 'packed') {
+      // Back-side detection for packed item
       sendBackImageToBackend(imageSrc);
     } else if (step === 4 && selectedOption === 'fruits') {
+      // Fruits/vegetables detection
       sendFruitImageToBackend(imageSrc);
     }
   }, [webcamRef, step, selectedOption]);
 
-  // Backend calls omitted for brevity, use the same as in your previous implementation
+  const sendFullCartImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_objects`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setTotalObjects(response.data.total_objects);
+      setStep(3); // Proceed to select option (packed item or fruit)
+      alert(`Total objects detected: ${response.data.total_objects}. Now, please choose Packed Item or Fruits/Vegetables.`);
+    } catch (error) {
+      console.error('Error detecting objects in full cart:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
+
+  const sendFrontImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_front_side`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const filteredTexts = response.data.detected_texts.filter(text => text !== "No text detected");
+      setOcrOutput(filteredTexts.join('\n'));
+      setStep(5); // Proceed to capture back image
+      alert('Front image processed. Please capture the back side image.');
+    } catch (error) {
+      console.error('Error sending front-side image to backend:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
+
+  const sendBackImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_back_side`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setOcrOutput(response.data.analyzed_text);
+      setStep(3); // Return to choose packed item or fruit
+      alert('Back image processed. Choose the next item type (Packed Item or Fruits/Vegetables).');
+    } catch (error) {
+      console.error('Error sending back-side image to backend:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
+
+  const sendFruitImageToBackend = async (imageSrc) => {
+    try {
+      const blob = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', blob, 'captured_image.jpg');
+      formData.append('boxCode', boxCode);
+
+      const response = await axios.post(`${API_URL}/detect_fruit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setFruitData(response.data);
+      alert(`Detected: ${response.data.produce_type}, Freshness: ${response.data.freshness}, Shelf Life: ${response.data.shelf_life}`);
+      setStep(3); // Return to choose packed item or fruit
+    } catch (error) {
+      console.error('Error detecting fruit/vegetable:', error);
+      alert('Failed to process the image. Please try again.');
+    }
+  };
 
   const handleOptionChange = (event) => {
     setSelectedOption(event.target.value);
@@ -123,7 +206,7 @@ const CaptureImage = () => {
             audio={false}
             ref={webcamRef}
             screenshotFormat="image/jpeg"
-            videoConstraints={{ facingMode: "environment" }} // Use back camera
+            videoConstraints={{ facingMode: "environment" }} // Back camera configuration
             width={320}
             height={240}
             className="border rounded-lg shadow-lg"
