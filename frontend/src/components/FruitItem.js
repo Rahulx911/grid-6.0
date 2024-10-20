@@ -104,24 +104,29 @@ const Fruit = () => {
       )}
       
       {fruitData && (
-        <div className="mt-4 p-4 border rounded-lg shadow-lg">
+        <div className="mt-4 p-4 border rounded-lg shadow-lg w-full max-w-2xl">
           <h2 className="text-lg mb-2">Fruit Detection Results</h2>
-          <p>Category: {fruitData.category}</p>
-          <p>Produce Type: {fruitData.produce_type}</p>
-          <p>Freshness: {fruitData.freshness}</p>
-          <p>Freshness Index: {fruitData.freshness_index.toFixed(2)}</p>
-          <p>Shelf Life: {fruitData.shelf_life}</p>
-          <button className="bg-green-500 text-white px-4 py-2 rounded mt-2" onClick={() => alert('Fruit data submitted successfully!')}>
+          <div className="text-base">
+            <p><strong>Category:</strong> {fruitData.category}</p>
+            <p><strong>Produce Type:</strong> {fruitData.produce_type}</p>
+            <p><strong>Freshness:</strong> {fruitData.freshness}</p>
+            <p><strong>Freshness Index:</strong> {fruitData.freshness_index.toFixed(2)}</p>
+            <p><strong>Shelf Life:</strong> {fruitData.shelf_life}</p>
+          </div>
+          <button className="bg-green-500 text-white px-4 py-2 rounded mt-4" onClick={() => alert('Fruit data submitted successfully!')}>
             Submit
           </button>
         </div>
       )}
 
-
       {imageSrc && (
         <div className="mt-4">
           <h2 className="text-lg">Captured or Uploaded Image</h2>
-          <img src={imageSrc} alt="Captured" className="mt-2 border rounded-lg shadow-lg" />
+          <img
+            src={imageSrc}
+            alt="Captured"
+            className="mt-2 border rounded-lg shadow-lg w-32 h-32 object-cover"
+          />
         </div>
       )}
     </div>

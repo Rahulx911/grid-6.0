@@ -365,9 +365,13 @@ const CaptureImage = () => {
       )}
 
       {outputData && (
-        <div className="mt-4 p-4 border rounded-lg shadow-lg">
+        <div className="mt-4 p-4 border rounded-lg shadow-lg w-full max-w-lg">
           <h2 className="text-lg mb-2">Detection Results</h2>
-          <p>Total Objects Detected: {outputData.total_objects}</p>
+          <textarea
+            className="w-full h-32 p-2 border rounded-lg resize-none"
+            value={`Total Objects Detected: ${outputData.total_objects}`}
+            readOnly
+          />
           <button className="bg-green-500 text-white px-4 py-2 rounded mt-4" onClick={handleSubmit}>
             Submit
           </button>
@@ -377,7 +381,11 @@ const CaptureImage = () => {
       {imageSrc && (
         <div className="mt-4">
           <h2 className="text-lg">Captured or Uploaded Image</h2>
-          <img src={imageSrc} alt="Captured" className="mt-2 border rounded-lg shadow-lg" />
+          <img
+            src={imageSrc}
+            alt="Captured"
+            className="mt-2 border rounded-lg shadow-lg w-32 h-32 object-cover"
+          />
         </div>
       )}
     </div>

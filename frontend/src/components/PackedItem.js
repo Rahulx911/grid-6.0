@@ -142,14 +142,15 @@ const PackedItem = () => {
           <p>Loading... Please wait.</p>
         </div>
       )}
-
+      
       {ocrOutput && (
-        <div className="mt-4 p-4 border rounded-lg shadow-lg">
+        <div className="mt-4 p-4 border rounded-lg shadow-lg w-full max-w-2xl">
           <h2 className="text-lg mb-2">OCR Output</h2>
           <textarea
             value={ocrOutput}
             onChange={(e) => setOcrOutput(e.target.value)}
             className="w-full p-2 border rounded"
+            style={{ height: '200px', fontSize: '16px' }}
           />
           <button className="bg-green-500 text-white px-4 py-2 rounded mt-2" onClick={handleSubmit}>
             Submit OCR Data
@@ -160,7 +161,11 @@ const PackedItem = () => {
       {imageSrc && (
         <div className="mt-4">
           <h2 className="text-lg">{isBackSide ? 'Captured or Uploaded Back-Side Image' : 'Captured or Uploaded Front-Side Image'}</h2>
-          <img src={imageSrc} alt="Captured" className="mt-2 border rounded-lg shadow-lg" />
+          <img
+            src={imageSrc}
+            alt="Captured"
+            className="mt-2 border rounded-lg shadow-lg w-32 h-32 object-cover"
+          />
         </div>
       )}
     </div>
