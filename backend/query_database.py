@@ -1,6 +1,6 @@
 # query_database.py
 from app import app  # Import the Flask app to use its context
-from models.database import db, Box, Item
+from backend.models.database import db, Box, Item
 
 # Use the app context for querying the database
 with app.app_context():

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models.object_detection import detect_objects
+from backend.models.object_detection import detect_objects
 import os
 from werkzeug.utils import secure_filename
 

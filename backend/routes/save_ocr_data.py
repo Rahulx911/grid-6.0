@@ -1,7 +1,7 @@
 # routes/save_ocr_data.py
 
 from flask import Blueprint, request, jsonify
-from models.database import db, Box, Item
+from backend.models.database import db, Box, Item
 
 save_ocr_data_blueprint = Blueprint('save_ocr_data', __name__)
 

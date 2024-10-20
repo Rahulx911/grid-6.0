@@ -6,10 +6,11 @@ import tensorflow as tf
 from PIL import Image
 import os
 from werkzeug.utils import secure_filename
+from backend.models_path import FRUITS
 
 
 # Load the pre-trained model
-model_path = r'C:\Users\tanya\OneDrive\Pictures\web_app\backend\models\fruits_detect.keras'
+model_path = FRUITS
 model = tf.keras.models.load_model(model_path)
 
 # List of fruits and vegetables for classification

@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from models.database import db, Box, Item
+from backend.models.database import db, Box, Item
 
 report_blueprint = Blueprint('report', __name__)
 
