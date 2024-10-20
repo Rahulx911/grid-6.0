@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 import easyocr
 import cv2
-from backend.models_path import OCR_BACK_SIDE_PATH
+from models_path import OCR_BACK_SIDE_PATH
 from werkzeug.utils import secure_filename
 
 detect_back_side_blueprint = Blueprint('detect_objects', __name__)
