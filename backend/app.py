@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from models.database import db
+from backend.models.database import db
 from config import Config
 from routes.detect import detect_objects_blueprint
 from routes.detect_back_side import detect_back_side_blueprint
