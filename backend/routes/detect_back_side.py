@@ -1,88 +1,145 @@
 from flask import Blueprint, request, jsonify
-from models.database import db, Box, Item
+from models.database import db, Box, PackedItem
+from datetime import datetime
 import os
-import torch
-import torchvision
-from PIL import Image
-import numpy as np
-import easyocr
-import cv2
-from models_path import OCR_BACK_SIDE_PATH
+from paddleocr import PaddleOCR
+import re
 from werkzeug.utils import secure_filename
 
-detect_back_side_blueprint = Blueprint('detect_objects', __name__)
+detect_back_side_blueprint = Blueprint('detect_back_side', __name__)
+ocr = PaddleOCR(lang='en')
 
-# Set the model path
-MODEL_PATH = OCR_BACK_SIDE_PATH
+def extract_text_from_image(image_path):
+    """
+    Extracts text from an image using PaddleOCR.
 
-# Load the model once during initialization
-def load_model(model_path, num_classes=2):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    model.eval()
-    return model
+    Args:
+        image_path (str): The path to the image file.
 
-# Initialize the model and device
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-model = load_model(MODEL_PATH, num_classes=2).to(device)
+    Returns:
+        str: The extracted text from the image.
+    """
+    try:
+        results = ocr.ocr(image_path)
+        return " ".join([res[1][0] for res in results[0]])
+    except Exception as e:
+        return str(e)
 
-# Function to preprocess the user-provided image
-def preprocess_image(image_path, img_size=(640, 640)):
-    image = Image.open(image_path).convert("RGB")
-    transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(img_size),
-        torchvision.transforms.ToTensor()
-    ])
-    return transform(image).unsqueeze(0)
+def normalize_malformed_date(raw_date):
+    """
+    Normalize malformed date strings like 21.11.202420.05.2025 or 15/08/25E6A.
 
-# Function to apply the model to the image and get the cropped region
-def get_cropped_image(model, image_tensor, original_image, device):
-    image_tensor = image_tensor.to(device)
-    with torch.no_grad():
-        predictions = model(image_tensor)
+    Args:
+        raw_date (str): The raw date string.
 
-    boxes = predictions[0]['boxes'].cpu().numpy()
-    scores = predictions[0]['scores'].cpu().numpy()
-    threshold = 0.5
-    best_box = None
-    for i, score in enumerate(scores):
-        if score > threshold:
-            best_box = boxes[i]
-            break
+    Returns:
+        list: A list of normalized date strings.
+    """
+    # Handle concatenated dates like 21.11.202420.05.2025 -> ["21.11.2024", "20.05.2025"]
+    if re.match(r"\d{2}\.\d{2}\.\d{4}\d{2}\.\d{2}\.\d{4}", raw_date):
+        first_date = raw_date[:10]  # First 10 characters as the first date
+        second_date = raw_date[10:]  # Remaining characters as the second date
+        return [first_date, second_date]
 
-    if best_box is None:
-        return None
+    # Handle cases like 15/08/25E6A -> 15/08/2025
+    if re.match(r"\d{1,2}/\d{1,2}/\d{2}[A-Z0-9]+", raw_date):
+        raw_date = re.match(r"(\d{1,2}/\d{1,2}/\d{2})", raw_date).group(1)
+        parts = raw_date.split('/')
+        year = int(parts[2]) + 2000  # Assume 21st century
+        return [f"{int(parts[0]):02d}/{int(parts[1]):02d}/{year}"]
 
-    xmin, ymin, xmax, ymax = map(int, best_box)
-    original_image_cv = cv2.cvtColor(np.array(original_image), cv2.COLOR_RGB2BGR)
-    cropped_image = original_image_cv[ymin:ymax, xmin:xmax]
-    return cropped_image
+    # Handle cases like 11-2025 -> 01/11/2025
+    if re.match(r"\d{1,2}-\d{4}$", raw_date):
+        parts = raw_date.split('-')
+        month = int(parts[0])
+        year = int(parts[1])
+        return [f"01/{month:02d}/{year}"]
 
-# Function to perform OCR on the cropped image using EasyOCR
-def perform_ocr(cropped_image):
-    if cropped_image is None:
-        return "No detected region."
+    # Default: Return as a single-element list
+    return [raw_date]
 
-    reader = easyocr.Reader(['en'])
-    result = reader.readtext(cropped_image)
 
-    detected_text = ""
-    for detection in result:
-        text = detection[1]
-        detected_text += text + "\n"
+def extract_dates(extracted_text):
+    """
+    Extract all dates from the text, including concatenated formats like 21.11.202420.05.2025.
 
-    return detected_text
+    Args:
+        extracted_text (str): The text extracted from the image.
 
-# Main function to run the model and OCR
-def apply_model_and_ocr(model, image_path):
-    original_image = Image.open(image_path).convert("RGB")
-    image_tensor = preprocess_image(image_path)
+    Returns:
+        list: A list of datetime objects for the extracted dates.
+    """
+    # Comprehensive date regex pattern
+    date_pattern = r"""
+        \b(?:                             # Word boundary
+            \d{2}\.\d{2}\.\d{4}\d{2}\.\d{2}\.\d{4} # Concatenated formats like 21.11.202420.05.2025
+            |\d{1,2}/\d{1,2}/\d{2}[A-Z0-9]+       # Malformed formats like 15/08/25E6A
+            |\d{5}\d{2}/\d{2}/\d{4}              # Malformed formats like 097417/09/2024
+            |\d{2}/\d{2}/\d{4}\d                 # Malformed formats like 16/06/202507
+            |\d{1,2}/\d{1,2}/\d{2}               # dd/mm/yy
+            |\d{1,2}[/-]\d{1,2}[/-]\d{4}         # dd/mm/yyyy or dd-mm-yyyy
+            |\d{1,2}[A-Z]{3}\d{4}                # Combined formats like 13SEP2024
+            |\d{4}[/-]\d{2}[/-]\d{2}             # yyyy-mm-dd
+            |\d{1,2} \w{3,9} \d{4}               # dd MMM yyyy (e.g., 13 Jan 2022)
+            |\d{2}\.\d{2}\.\d{4}                 # dd.mm.yyyy (e.g., 02.03.2022)
+            |\d{2}\.\d{4}                        # mm.yyyy (e.g., 09.2024)
+        )\b
+    """
+    raw_dates = re.findall(date_pattern, extracted_text, re.VERBOSE)
+    parsed_dates = []
 
-    cropped_image = get_cropped_image(model, image_tensor, original_image, device)
-    analyzed_text = perform_ocr(cropped_image)
-    return analyzed_text
+    for raw_date in raw_dates:
+        try:
+            # Normalize malformed date formats
+            normalized_dates = normalize_malformed_date(raw_date)
+            for normalized_date in normalized_dates:
+                # Try parsing with various formats
+                parsed_date = None
+                for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%Y-%m-%d", "%d %b %Y", "%d.%m.%Y", "%m.%Y", "%b.%Y"):
+                    try:
+                        parsed_date = datetime.strptime(normalized_date, fmt)
+                        break
+                    except ValueError:
+                        continue
+
+                if parsed_date:
+                    parsed_dates.append(parsed_date)
+        except ValueError:
+            # Skip invalid dates
+            continue
+
+    return sorted(parsed_dates)  # Sort dates for determining manufacturing and expiry
+
+
+def determine_life_and_status(dates):
+    """
+    Determine manufacturing date, expiry date, life of the product, and expiration status.
+
+    Args:
+        dates (list): A sorted list of datetime objects.
+
+    Returns:
+        dict: A dictionary with manufacturing date, expiry date, product life, and expiration status.
+    """
+    if len(dates) < 2:
+        return {
+            'manufacturing_date': None,
+            'expiry_date': None,
+            'product_life_days': None,
+            'expired': None
+        }
+
+    manufacturing_date = dates[0]
+    expiry_date = dates[-1]
+    product_life_days = (expiry_date - manufacturing_date).days
+    expired = datetime.now() > expiry_date
+
+    return {
+        'manufacturing_date': manufacturing_date.strftime("%d/%m/%Y"),
+        'expiry_date': expiry_date.strftime("%d/%m/%Y"),
+        'product_life_days': product_life_days,
+        'expired': expired
+    }
 
 @detect_back_side_blueprint.route('/detect_back_side', methods=['POST'])
 def detect_back_side():
@@ -97,23 +154,40 @@ def detect_back_side():
     file.save(file_path)
 
     # Run the OCR model
-    analyzed_text = apply_model_and_ocr(model, image_path=file_path)
+    extracted_text = extract_text_from_image(file_path)
+    extracted_dates = extract_dates(extracted_text)
 
-    return jsonify({'analyzed_text': analyzed_text})
+    life_and_status = determine_life_and_status(extracted_dates)
 
-@detect_back_side_blueprint.route('/save_ocr_data', methods=['POST'])
-def save_ocr_data():
-    box_code = request.json.get('box_code')
-    ocr_output = request.json.get('ocr_output')
+    
+    box_code = request.form.get('box_code')
+    if not box_code:
+        return jsonify({'error': 'Box code is required'}), 400
 
-    # Find the box by its code
+    # Find box and update PackedItem
     box = Box.query.filter_by(box_code=box_code).first()
     if not box:
-        return jsonify({'error': 'Box not found'}), 404
+        return jsonify({'error': f'Box with code {box_code} not found'}), 404
 
-    # Create a new Item entry with the OCR data
-    new_item = Item(box_id=box.box_id, item_type='back', back_data=ocr_output)
-    db.session.add(new_item)
+    packed_item = PackedItem.query.filter_by(box_id=box.id).first()
+    if not packed_item:
+        return jsonify({'error': f'No packed item found for box {box_code}'}), 404
+
+    # Update expiry details
+    today = datetime.utcnow().date()
+    packed_item.manufacturing_date=life_and_status['manufacturing_date']
+    packed_item.expiry_date = life_and_status['expiry_date']
+    packed_item.expired = "Yes" if life_and_status['expired'] else "No"
+    packed_item.expected_life_span = life_and_status['product_life_days']
+    db.session.add(packed_item)
     db.session.commit()
 
-    return jsonify({'message': 'OCR data saved successfully'})
+    return jsonify({
+        "message": "Data processed and saved successfully",
+        "manufacturing_date": life_and_status['manufacturing_date'],
+        "expiry_date": life_and_status['expiry_date'],
+        "expired": "Yes" if life_and_status['expired'] else "No",
+        "expected_life_span": life_and_status['product_life_days']
+    })
+
+

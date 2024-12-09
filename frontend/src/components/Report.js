@@ -1,95 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect} from "react";
+import { useNavigate } from "react-router-dom";
+import Navbar from "./Navbar"; 
+const API = process.env.REACT_APP_API_URL
+
 
 const Report = () => {
-  const [boxes, setBoxes] = useState([]);
-  const [selectedBox, setSelectedBox] = useState(null);
-  const [items, setItems] = useState([]);
-  const [totalObjects, setTotalObjects] = useState(null);
-  const API_URL = process.env.REACT_APP_API_URL;
+  const navigate = useNavigate();
+
+  const [boxReports, setBoxReports] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredBoxes, setFilteredBoxes] = useState([]);
 
   useEffect(() => {
-    const fetchBoxes = async () => {
+    const fetchBoxReports = async () => {
       try {
-        const response = await axios.get(`${API_URL}/get_boxes`);
-        setBoxes(response.data);
+        const response = await fetch(`${API}/box-reports`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch box reports");
+        }
+        const data = await response.json();
+        setBoxReports(data);
+        setFilteredBoxes(data);
       } catch (error) {
-        console.error('Error fetching boxes:', error);
+        console.error("Error fetching box reports:", error);
       }
     };
 
-    fetchBoxes();
+    fetchBoxReports();
   }, []);
 
-  const fetchBoxDetails = async (boxCode) => {
-    try {
-      const response = await axios.get(`${API_URL}/get_box_details/${boxCode}`);
-      setSelectedBox(boxCode);
-      setTotalObjects(response.data.total_objects);
-      setItems(response.data.items);
-    } catch (error) {
-      console.error('Error fetching box details:', error);
-    }
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    const filtered = boxReports.filter((box) =>
+      box.boxCode.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredBoxes(filtered);
   };
 
+  const handleAutocompleteSelect = (boxCode) => {
+    setSearchTerm(boxCode);
+    setFilteredBoxes(boxReports.filter((box) => box.boxCode === boxCode));
+  };
+
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Report</h1>
-      {!selectedBox && (
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Boxes</h2>
-          <div className="flex flex-wrap mt-4">
-            {boxes.map((box, index) => (
-              <div
-                key={box.box_code}
-                className="bg-gray-200 p-4 m-2 rounded-lg cursor-pointer"
-                onClick={() => fetchBoxDetails(box.box_code)}
-              >
-                <h3 className="font-bold">Box {index + 1}</h3>
-                <p>Code: {box.box_code}</p>
-              </div>
-            ))}
+    <div className="bg-gray-100 min-h-screen flex flex-col">
+      <Navbar currentStep="Home > Report" /> {/* Navbar with breadcrumb */}
+
+      {/* Main Content */}
+      <div className="flex-grow px-4 sm:px-6 lg:px-8 py-10 lg:py-16"> {/* Dynamic padding */}
+        {/* Heading and Search */}
+        <div className="text-center mb-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-8 mt-8">
+            Report
+          </h1>
+          <div className="relative flex justify-center items-center gap-4">
+          <div className="relative w-full max-w-xs sm:max-w-md lg:max-w-lg">
+          <input
+                type="text"
+                placeholder="Search Box Code"
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
+              />
+            {searchTerm && (
+                <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  {filteredBoxes.map((box, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleAutocompleteSelect(box.boxCode)}
+                      className="cursor-pointer p-2 hover:bg-gray-100 text-gray-700"
+                    >
+                      {box.boxCode}
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
-        </div>
-      )}
-      {selectedBox && (
-        <div>
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-            onClick={() => setSelectedBox(null)}
-          >
-            Back to Boxes
-          </button>
-          <h2 className="text-xl font-semibold mb-2">Box {selectedBox}</h2>
-          <p className="mb-4">Total Objects Detected: {totalObjects}</p>
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th className="py-2">S.No</th>
-                <th className="py-2">Item Type</th>
-                <th className="py-2">Front Side Data</th>
-                <th className="py-2">Back Side Data</th>
-                <th className="py-2">Produce Type</th>
-                <th className="py-2">Freshness</th>
-                <th className="py-2">Shelf Life</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={item.item_id} className="border-t">
-                  <td className="py-2">{index + 1}</td>
-                  <td className="py-2">{item.item_type}</td>
-                  <td className="py-2">{item.front_data || 'N/A'}</td>
-                  <td className="py-2">{item.back_data || 'N/A'}</td>
-                  <td className="py-2">{item.produce_type || 'N/A'}</td>
-                  <td className="py-2">{item.freshness || 'N/A'}</td>
-                  <td className="py-2">{item.shelf_life || 'N/A'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm sm:text-base lg:text-lg"
+              onClick={() => setFilteredBoxes(filteredBoxes)} // Updated logic
+              disabled={!searchTerm}
+            >
+              Search
+            </button>
+            </div>
         </div>
-      )}
+
+        {/* Box Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-center">
+          {filteredBoxes.map((box, index) => (
+            <div
+              key={index}
+              className="bg-white border border-gray-300 rounded-lg shadow-md p-6 hover:shadow-lg transition transform hover:-translate-y-1"
+              style={{ width: "100%", maxWidth: "24rem", margin: "0 auto" }}
+            >
+              <h2 className="text-base sm:text-lg lg:text-2xl font-semibold text-gray-800 mb-3">
+                {box.boxCode}
+              </h2>
+              <p className="text-sm sm:text-base lg:text-xl text-gray-600 mb-4">
+                Total Objects:{" "}
+                <span className="font-bold text-gray-800">{box.totalObjects}</span>
+              </p>
+              <button
+                onClick={() => navigate(`/report/${box.boxCode}`)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-sm sm:text-base lg:text-lg font-semibold"
+              >
+                View Report
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

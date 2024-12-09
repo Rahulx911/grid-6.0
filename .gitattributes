@@ -1,4 +1,4 @@
-backend/models/faster_rcnn_model.pth filter=lfs diff=lfs merge=lfs -text
-backend/models/retinanet_model.pth filter=lfs diff=lfs merge=lfs -text
-backend/models/OCR_back_side.pth filter=lfs diff=lfs merge=lfs -text
-backend/models/fruits_detect.keras filter=lfs diff=lfs merge=lfs -text
+
+backend/models/fiv1.keras filter=lfs diff=lfs merge=lfs -text
+backend/models/fruiznet_final_model.keras filter=lfs diff=lfs merge=lfs -text
+

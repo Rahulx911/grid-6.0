@@ -1,175 +1,435 @@
-import React, { useState, useCallback } from 'react';
-import Webcam from 'react-webcam';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Webcam from "react-webcam";
+import Navbar from "./Navbar";
+const API = process.env.REACT_APP_API_URL
 
 const PackedItem = () => {
+  const navigate=useNavigate();
   const [imageSrc, setImageSrc] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [ocrOutput, setOcrOutput] = useState('');
-  const [isBackSide, setIsBackSide] = useState(false);
-  const webcamRef = React.useRef(null);
-  const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL;
+  const [cameraError, setCameraError] = useState("");
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [frontResults, setFrontResults] = useState(null);
+  const [backResults, setBackResults] = useState(null);
+  const [capturingBack, setCapturingBack] = useState(false);
+  const [currentStep, setCurrentStep] = useState("Home > Packed Item > Front");
+  const webcamRef = useRef(null);
+  const [boxCode, setBoxCode] = useState(null);
 
-  const capture = useCallback(() => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setImageSrc(imageSrc);
-    setSelectedFile(null); // Clear the selected file when using webcam
-    sendImageToBackend(imageSrc);
-  }, [webcamRef]);
+  // Check camera access on component mount
+  useEffect(() => {
+    const checkCameraAccess = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        setIsCameraReady(true);
+      } catch (error) {
+        console.error("Camera initialization error:", error);
+        setCameraError(
+          "Unable to access the camera. Please check your permissions or device."
+        );
+      }
+    };
+    checkCameraAccess();
+    const storedBoxCode = localStorage.getItem("boxCode");
+    if (storedBoxCode) {
+      setBoxCode(storedBoxCode);
+    } 
+  }, []);
 
-  const handleFileChange = (event) => {
-    setSelectedFile(event.target.files[0]);
-    setImageSrc(URL.createObjectURL(event.target.files[0]));
+  const updateBreadcrumb = (step) => {
+    // Helper function to update the breadcrumb
+    setCurrentStep(`Home > Packed Item > ${step}`);
   };
 
-  const sendImageToBackend = async (imageSrc) => {
-    try {
-      setIsLoading(true);
-      let formData = new FormData();
-      if (selectedFile) {
-        formData.append('file', selectedFile, selectedFile.name);
-      } else {
-        const blob = await fetch(imageSrc).then((res) => res.blob());
-        formData.append('file', blob, 'captured_image.jpg');
-      }
+  // Capture the front side
+  // const captureFront = () => {
+  //   if (webcamRef.current) {
+  //     const image = webcamRef.current.getScreenshot();
+  //     setImageSrc(image);
+  //     setIsProcessing(true);
 
-      const endpoint = isBackSide ? `${API_URL}/detect_back_side` : `${API_URL}/detect_front_side`;
+  //     // Simulate processing front side results
+  //     setTimeout(() => {
+  //       setFrontResults({ brand: "Example Brand" });
+  //       setIsProcessing(false);
+  //       updateBreadcrumb("Front Result");
+  //     }, 2000);
+  //   } else {
+  //     setCameraError("Camera is not ready.");
+  //   }
+  // };
 
-      const response = await axios.post(endpoint, formData);
-      const detectedText = isBackSide ? response.data.analyzed_text : response.data.detected_texts.join('\n');
-      setOcrOutput(detectedText);
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error processing the image:', error);
-      setIsLoading(false);
-      alert('Failed to process the image. Please try again.');
+  const captureFront = () => {
+    if (webcamRef.current) {
+      const image = webcamRef.current.getScreenshot();
+      setImageSrc(image);
+      handleImageProcessingFront(image);
+      updateBreadcrumb("Front Result");
+    } else {
+      setCameraError("Camera is not ready.");
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      const data = {
-        boxCode: "your_box_code_here", // Replace with actual box code from state if needed
-        outputData: {
-          item_type: isBackSide ? 'packed_back' : 'packed_front',
-          front_data: !isBackSide ? ocrOutput : null,
-          back_data: isBackSide ? ocrOutput : null,
-        },
+
+  // Capture the back side
+  // const captureBack = () => { 
+  //   if (webcamRef.current) {
+  //     updateBreadcrumb("Front > Back"); 
+  //     const image = webcamRef.current.getScreenshot();
+  //     setImageSrc(image);
+  //     setIsProcessing(true);
+
+  //     // Simulate processing back side results
+  //     setTimeout(() => {
+  //       setBackResults({
+  //         expiry_date: "2024-12-31",
+  //         expired: "No",
+  //         expected_life_span: "12 months",
+  //       });
+  //       setIsProcessing(false);
+  //       setCapturingBack(false);
+  //       updateBreadcrumb("Result"); 
+  //     }, 2000);
+  //   } else {
+  //     setCameraError("Camera is not ready.");
+  //   }
+  // };
+  const captureBack = () => {
+    if (webcamRef.current) {
+      const image = webcamRef.current.getScreenshot();
+      setImageSrc(image);
+      setCapturingBack(false);
+      handleImageProcessingBack(image);
+      updateBreadcrumb("Result"); 
+    } else {
+      setCameraError("Camera is not ready.");
+    }
+  };
+
+  // const handleUpload = (event, side) => {
+  //   const file = event.target.files[0];
+  //   if (file) {
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       setImageSrc(reader.result); // Set the image preview
+  //       setIsProcessing(true);
+
+  //       // Simulate processing results based on which side is being uploaded
+  //       setTimeout(() => {
+  //         if (side === "front") {
+  //           setFrontResults({ brand: "Uploaded Brand" }); // Simulated result for front
+  //           updateBreadcrumb("Front Result");
+  //         } else if (side === "back") {
+  //           setBackResults({
+  //             expiry_date: "2024-12-31",
+  //             expired: "No",
+  //             expected_life_span: "12 months",
+  //           }); // Simulated result for back
+  //           updateBreadcrumb("Back Result");
+  //         }
+  //         setIsProcessing(false);
+  //         if (side === "back") {
+  //           setCapturingBack(false);  // Stop capturing back
+  //         }
+  //       }, 2000);
+  //     };
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
+
+  const handleUpload = (event, side) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageSrc(reader.result);
+          if (side === "front") {
+            handleImageProcessingFront(reader.result);
+            updateBreadcrumb("Front Result");
+          } else if (side === "back") {
+            setCapturingBack(false);
+            handleImageProcessingBack(reader.result);
+            updateBreadcrumb("Back Result");
+          }
       };
-  
-      const response = await axios.post(`${API_URL}/save_data`, data);
-      alert('Data submitted successfully.');
-  
-      // If it's the front side, switch to the back side; otherwise reset the form for the next item
-      if (!isBackSide) {
-        setIsBackSide(true);
-        setImageSrc(null);
-        setSelectedFile(null);
-        setOcrOutput('');
-        alert('Now, please capture or upload the back-side image.');
-      } else {
-        setIsBackSide(false);
-        setImageSrc(null);
-        setSelectedFile(null);
-        setOcrOutput('');
-        alert('Back-side data submitted successfully! You can now process the next item.');
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-      alert('Failed to save data. Please try again.');
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleHome = () => {
-    navigate('/');
-  };
-
-  const handleNewBox = () => {
-    // Reset all states and navigate to the Enter Box Code page
+  // Reset state to capture another image
+  const handleReset = () => {
     setImageSrc(null);
-    setSelectedFile(null);
-    setOcrOutput('');
-    setIsLoading(false);
-    setIsBackSide(false);
-    navigate('/enter-box-code'); // Assuming '/enter-box-code' is the route for entering the box code
+    setFrontResults(null);
+    setBackResults(null);
+    setCapturingBack(false);
+    setIsProcessing(false);
+    updateBreadcrumb("Front");
   };
 
-  const switchToFruit = () => {
-    navigate('/fruit-item');
+  // Switch to fresh items detection
+  const switchToFreshItems = () => {
+    navigate("/fresh-produce")
   };
 
-  return (
-    <div className="flex flex-col items-center p-6">
-      <div className="flex justify-between w-full mb-4">
-        <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={handleHome}>
-          Home
-        </button>
-        <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={handleNewBox}>
-          New Box
-        </button>
-        <button className="bg-orange-500 text-white px-4 py-2 rounded" onClick={switchToFruit}>
-          Switch to Fruit
-        </button>
-      </div>
+  const handleImageProcessingFront = async (image) => {
+    setIsProcessing(true);
+  
+    const formData = new FormData();
+    const blob = await fetch(image).then((r) => r.blob());
+    formData.append("file", blob, "image.jpg");
+    formData.append("box_code", boxCode); 
+    console.log(boxCode);
+  
+    try {
+      const response = await fetch(`${API}/detect_front_side`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+  
+      if (response.ok) {
+        setFrontResults({ brand: result.brand });
+      } else {
+        setCameraError("Failed to process the image. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during image upload:", error);
+      setCameraError("Network error. Please try again.");
+    }
+  
+    setIsProcessing(false);
+  };
 
-      <div className="mt-4">
-        <h2 className="text-lg">{isBackSide ? 'Capture or Upload Back-Side Image' : 'Capture or Upload Front-Side Image'}</h2>
+  const handleImageProcessingBack = async (image) => {
+    setIsProcessing(true);
+  
+    const formData = new FormData();
+    const blob = await fetch(image).then((r) => r.blob());
+    formData.append("file", blob, "image.jpg");
+    formData.append("box_code", boxCode); 
+    console.log(boxCode);
+  
+    try {
+      const response = await fetch(`${API}/detect_back_side`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+  
+      if (response.ok) {
+        setBackResults({
+            expiry_date: result.expiry_date,
+            expired: result.expired,
+            expected_life_span: result.expected_life_span,
+            manufacturing_date: result.manufacturing_date,
+
+        });
+      } else {
+        setCameraError("Failed to process the image. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during image upload:", error);
+      setCameraError("Network error. Please try again.");
+    }
+  
+    setIsProcessing(false);
+  };
+
+return (
+  <div className="flex flex-col items-center bg-gray-100 min-h-screen">
+    {/* Navbar with dynamic breadcrumb */}
+    <Navbar currentStep={currentStep} />
+
+    {/* Page Content */}
+    <div className="flex flex-col items-center p-4 mt-16">
+      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-6 text-blue-700">
+        {isProcessing
+          ? "Processing Image"
+          : capturingBack
+          ? "Capture Packed Item: Back"
+          : backResults
+          ? "Overall Results"
+          : frontResults
+          ? "Front Results"
+          : "Capture Packed Item: Front"}
+      </h1>
+
+      {cameraError && <p className="text-red-500">{cameraError}</p>}
+
+      {/* Camera Section */}
+      {!isProcessing && isCameraReady && (
+  <>
+    {(!frontResults && !capturingBack && !backResults) || capturingBack ? (
+      <div className="flex flex-col items-center gap-6 mt-6">
+        {/* Webcam Section */}
+        <div className="flex flex-col items-center gap-6">
         <Webcam
           audio={false}
           ref={webcamRef}
           screenshotFormat="image/jpeg"
-          width={320}
-          height={240}
-          className="border rounded-lg shadow-lg mt-4"
+          videoConstraints={{ facingMode: "environment" }}
+          className="border rounded-lg shadow-lg w-full sm:w-2/3 md:w-1/2 lg:w-full h-auto"
         />
-        <button className="bg-blue-500 text-white px-4 py-2 rounded mt-2" onClick={capture}>
-          Capture Image
-        </button>
-        <div className="mt-4">
-          <input type="file" accept="image/*" onChange={handleFileChange} className="mb-2" />
-          <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => sendImageToBackend(imageSrc)}>
-            Upload Image
+      </div>
+        
+        {/* Buttons Section */}
+        <div className="flex flex-col lg:flex-row items-center gap-6 w-full lg:justify-center">
+          <button
+            onClick={capturingBack ? captureBack : captureFront}
+            className="bg-blue-500 hover:bg-blue-600 text-white 
+                       text-sm sm:text-base lg:text-lg 
+                       px-4 sm:px-6 lg:px-8 
+                       py-2 sm:py-3 lg:py-3 
+                       rounded-lg w-full sm:w-52  lg:w-auto"
+          >
+            {capturingBack ? "Capture Back Side" : "Capture Front Side"}
+          </button>
+
+          {/* Upload Image Section */}
+          <div className="flex flex-col items-center w-full lg:w-auto">
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer bg-gray-700 hover:bg-gray-800 text-white 
+                         text-sm sm:text-base lg:text-lg 
+                         px-4 sm:px-6 lg:px-8 
+                         py-2 sm:py-3 lg:py-3 
+                         rounded-lg w-full sm:w-52  lg:w-auto text-center"
+            >
+              Upload Image
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleUpload(e, capturingBack ? "back" : "front")}
+              className="hidden"
+            />
+          </div>
+
+          <button
+            onClick={switchToFreshItems}
+            className="bg-[#F09500] hover:bg-yellow-500 text-white 
+                       text-sm sm:text-base lg:text-lg 
+                       px-4 sm:px-6 lg:px-8 
+                       py-2 sm:py-3 lg:py-3 
+                       rounded-lg w-full sm:w-52  lg:w-auto"
+          >
+            Detect Fresh Items
           </button>
         </div>
       </div>
+    ) : null}
+  </>
+)}
 
-      {isLoading && (
-        <div className="mt-4">
-          <p>Loading... Please wait.</p>
-        </div>
-      )}
-      
-      {ocrOutput && (
-        <div className="mt-4 p-4 border rounded-lg shadow-lg w-full max-w-2xl">
-          <h2 className="text-lg mb-2">OCR Output</h2>
-          <textarea
-            value={ocrOutput}
-            onChange={(e) => setOcrOutput(e.target.value)}
-            className="w-full p-2 border rounded"
-            style={{ height: '200px', fontSize: '16px' }}
-          />
-          <button className="bg-green-500 text-white px-4 py-2 rounded mt-2" onClick={handleSubmit}>
-            Submit OCR Data
-          </button>
-        </div>
-      )}
-
-      {imageSrc && (
-        <div className="mt-4">
-          <h2 className="text-lg">{isBackSide ? 'Captured or Uploaded Back-Side Image' : 'Captured or Uploaded Front-Side Image'}</h2>
+      {/* Processing Section */}
+      {isProcessing && imageSrc && (
+        <div className="flex flex-col items-center">
           <img
             src={imageSrc}
             alt="Captured"
-            className="mt-2 border rounded-lg shadow-lg w-32 h-32 object-cover"
+            className="mt-4 border rounded-lg shadow-lg w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 object-cover"
           />
+          <p className="mt-4 text-blue-600 text-lg">Processing...</p>
+        </div>
+      )}
+
+      {/* Front Results Section */}
+      {frontResults && !backResults && !isProcessing && !capturingBack && (
+        <div className="mt-6 p-6 bg-white rounded-lg shadow-lg w-full max-w-xl">
+          <h2 className="text-2xl font-bold text-blue-700 mb-4">Detected Results</h2>
+          <div className="text-lg text-gray-700 space-y-2">
+            <p>
+              <strong>Brand:</strong> {frontResults.brand}
+            </p>
+          </div>
+          <div className="flex gap-4 sm:gap-6 mt-6 justify-center flex-wrap">
+  <button
+    onClick={() => setCapturingBack(true)}
+    className="bg-blue-500 hover:bg-blue-600 text-white 
+               px-6 sm:px-8 py-2 sm:py-3 
+               rounded-lg sm:rounded-xl shadow-lg 
+               text-base sm:text-lg transition-all hover:scale-105 
+               w-48 sm:w-64"
+  >
+    Capture Back Side
+  </button>
+  <button
+    onClick={handleReset}
+    className="bg-[#FB641B] hover:bg-orange-600 text-white 
+               px-6 sm:px-8 py-2 sm:py-3 
+               rounded-lg sm:rounded-xl shadow-lg 
+               text-base sm:text-lg transition-all hover:scale-105 
+               w-48 sm:w-64"
+  >
+    Capture Another Image
+  </button>
+  <button
+    onClick={switchToFreshItems}
+    className="bg-[#F09500] hover:bg-yellow-500 text-white 
+               px-6 sm:px-8 py-2 sm:py-3 
+               rounded-lg sm:rounded-xl shadow-lg 
+               text-base sm:text-lg transition-all hover:scale-105 
+               w-48 sm:w-64"
+  >
+    Detect Fresh Items
+  </button>
+</div>
+        </div>
+      )}
+
+      {/* Final Results Section */}
+      {backResults && (
+        <div className="mt-6 p-6 bg-white rounded-lg shadow-lg w-full max-w-xl">
+          <h2 className="text-2xl font-bold text-blue-700 mb-4">
+            Detected Results
+          </h2>
+          <div className="text-lg text-gray-700 space-y-2">
+            <p>
+              <strong>Brand:</strong> {frontResults.brand}
+            </p>
+            <p>
+              <strong>ManuFacturing Date:</strong> {backResults.manufacturing_date}
+            </p>
+            <p>
+              <strong>Expiry Date:</strong> {backResults.expiry_date}
+            </p>
+            <p>
+              <strong>Expired:</strong> {backResults.expired}
+            </p>
+            <p>
+              <strong>Expected Life Span:</strong> {backResults.expected_life_span}
+            </p>
+          </div>
+          <div className="flex gap-4 mt-6 justify-center flex-row flex-wrap">
+            <button
+              onClick={handleReset}
+              className="bg-blue-500 hover:bg-blue-600 text-white 
+                           text-sm sm:text-base lg:text-lg 
+                           px-4 sm:px-6 lg:px-8 
+                           py-2 sm:py-3 lg:py-3 
+                           rounded-lg w-36 sm:w-52 lg:w-64"
+            >
+              Capture Another Image
+            </button>
+            <button
+              onClick={switchToFreshItems}
+              className="bg-[#F09500] hover:bg-yellow-500 text-white 
+                           text-sm sm:text-base lg:text-lg 
+                           px-4 sm:px-6 lg:px-8 
+                           py-2 sm:py-3 lg:py-3 
+                           rounded-lg w-36 sm:w-52 lg:w-64"
+            >
+              Detect Fresh Items
+            </button>
+          </div>
         </div>
       )}
     </div>
-  );
+  </div>
+);
 };
 
 export default PackedItem;
+
