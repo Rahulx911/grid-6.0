@@ -11,7 +11,7 @@ const CaptureImage = () => {
   const [cameraError, setCameraError] = useState("");
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [totalObjects, setTotalObjects] = useState(null);
-  const [detectedText, setDetectedText] = useState(null);
+  const [detectedText, setDetectedText] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const webcamRef = useRef(null);
   const [boxCode, setBoxCode] = useState(null);
@@ -108,12 +108,13 @@ const CaptureImage = () => {
         body: formData,
       });
       const result = await response.json();
+      console.log(result)
 
       // Handle response (Object Count and Detected Text)
       if (response.ok) {
         setTotalObjects(result.total_objects);
         console.log(result.detected_texts)
-        setDetectedText(result.detected_texts);
+        setDetectedText(result.detected_texts || []);
       } else {
         setCameraError("Failed to process the image. Please try again.");
       }
@@ -204,9 +205,9 @@ const CaptureImage = () => {
         )}
 
 {totalObjects && (
-          <div className="mt-6 p-6 bg-white rounded-lg shadow-lg w-full max-w-xl">
+          <div className="mt-6 p-6 bg-white rounded-lg shadow-lg w-full max-w-3xl">
             <h2 className="text-2xl font-bold text-blue-700 mb-4">Detection Results</h2>
-            <div className="text-lg text-gray-700 space-y-2">
+            <div className="text-xl text-gray-700 space-y-2">
               <p>
                 <strong>Total Objects:</strong> {totalObjects}
               </p>

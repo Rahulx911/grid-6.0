@@ -13,7 +13,7 @@ from routes.box_reports import report_blueprint
 from routes.detail_box_report import detail_box_report_blueprint
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": ["https://grid-6-0.vercel.app", "http://localhost:3000"]}})
 app.config.from_object(Config)
 
 db.init_app(app)

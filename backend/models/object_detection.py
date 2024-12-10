@@ -132,7 +132,8 @@ def detect_objects_for_box():
         db.session.commit()
         return jsonify({
             'box_code': box_code,
-            'total_objects': total_objects
+            'total_objects': total_objects,
+            'detected_texts': ocr_results
         })
 
     # If the box exists, just update the total_objects

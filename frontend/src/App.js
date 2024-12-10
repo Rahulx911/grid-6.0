@@ -18,9 +18,8 @@ const App = () => {
           <Route path="/enter-box-code" element={<EnterBoxCode />} />
           <Route path="/packed-item" element={<PackedItem />} />
           <Route path="/fresh-produce" element={<FreshProduce />} />
-          <Route path='/report' element={<Report />}/>
+          <Route path="/report" element={<Report />} />
           <Route path="/report/:boxCode" element={<BoxReport />} />
-
         </Routes>
       </div>
     </Router>

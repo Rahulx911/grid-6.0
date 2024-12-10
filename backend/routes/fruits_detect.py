@@ -35,7 +35,7 @@ freshness_model = tf.keras.models.load_model(freshness_model_path)
 class_labels = sorted([d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))])
 
 # Define fruits for classification
-fruit_list = ["apple", "orange", "banana", "lemon","mango"]
+fruit_list = ["apple", "orange", "banana", "lemon","mango","pineapple"]
 
 # Create a blueprint for the fruit detection route
 fruit_detection_blueprint = Blueprint('detect_fruit', __name__)
