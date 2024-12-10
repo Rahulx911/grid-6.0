@@ -211,16 +211,16 @@ const CaptureImage = () => {
                 <strong>Total Objects:</strong> {totalObjects}
               </p>
               <div>
-        <strong>Detected Texts: </strong>
-        <ul className="list-disc pl-6">
-          {detectedText && detectedText.length > 0 ? (
-            detectedText.map((text, index) => (
+              {detectedText && detectedText.length > 0 && (
+        <div>
+          <strong>Detected Texts: </strong>
+          <ul className="list-disc pl-6">
+            {detectedText.map((text, index) => (
               <li key={index}>{text}</li>
-            ))
-          ) : (
-            <li>No detected text</li>
-          )}
-        </ul>
+            ))}
+          </ul>
+        </div>
+      )}
       </div>
             </div>
             <div className="flex gap-4 mt-6 justify-center flex-row flex-wrap">             
