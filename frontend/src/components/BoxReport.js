@@ -19,6 +19,7 @@ const BoxReport = () => {
           throw new Error("Failed to fetch box report");
         }
         const data = await response.json();
+        console.log(data);
         setPackedItems(data.packedItems || []);
         setFreshProduce(data.freshProduce || []);
       } catch (error) {
@@ -72,7 +73,7 @@ const BoxReport = () => {
                   <p>Mfd Date: {item.manufacturing_date}</p>
                   <p>Expiry Date: {item.expiry_date}</p>
                   <p>Expired: {item.expired}</p>
-                  <p>Life Span: {item.lifeSpan}</p>
+                  <p>Life Span: {item.expected_life_span}</p>
                 </div>
               </div>
             ))}
@@ -101,10 +102,10 @@ const BoxReport = () => {
                     <td className="p-3 truncate">{item.timestamp}</td>
                     <td className="p-3 break-words whitespace-normal">{item.brand}</td>
                     <td className="p-3 truncate">{item.manufacturing_date}</td>
-                    <td className="p-3 truncate">{item.expiryDate}</td>
+                    <td className="p-3 truncate">{item.expiry_date}</td>
                     <td className="p-3 truncate">{item.count}</td>
                     <td className="p-3 truncate">{item.expired}</td>
-                    <td className="p-3 truncate">{item.lifeSpan}</td>
+                    <td className="p-3 truncate">{item.expected_life_span}</td>
                   </tr>
                 ))}
               </tbody>
