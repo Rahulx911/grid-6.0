@@ -135,7 +135,7 @@ const FreshProduce = () => {
           category: result.category,               // "Vegetable" or "Fruit"
           produce: result.produce_type,            // "Potato", "Apple", etc.
           fresh: result.freshness,                 // "Moderately Fresh", "Yes", etc.
-          freshness_index: roundedFreshnessIndex, // Freshness score (e.g., 5.95)
+          freshness_index: parseFloat(result.freshness_index.toFixed(2)), // Freshness score (e.g., 5.95)
           shelf_life: `${result.shelf_life} days`, // Shelf life (e.g., "5 days")
         });
       } else {
@@ -252,7 +252,7 @@ const FreshProduce = () => {
                 <strong>Fresh:</strong> {freshData.fresh}
               </p>
               <p>
-                <strong>Freshness Index:</strong> {freshData.freshness_index}
+                <strong>Freshness Index:</strong> {parseFloat(freshData.freshness_index).toFixed(2)}
               </p>
               <p>
                 <strong>Shelf Life:</strong> {freshData.shelf_life}
