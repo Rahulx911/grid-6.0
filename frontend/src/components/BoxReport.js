@@ -132,7 +132,7 @@ const BoxReport = () => {
                 </div>
                 <div className="text-sm text-gray-800">
                   <p>Freshness: {item.freshness}</p>
-                  <p>Index: {item.index}</p>
+                  <p>Index: {parseFloat(item.index).toFixed(2)}</p>
                   <p>Life Span: {item.lifeSpan}</p>
                 </div>
               </div>
@@ -162,7 +162,7 @@ const BoxReport = () => {
                     <td className="p-3">{item.category}</td>
                     <td className="p-3">{item.produce}</td>
                     <td className="p-3">{item.freshness}</td>
-                    <td className="p-3">{item.index}</td>
+                    <td className="p-3">{parseFloat(item.index).toFixed(2)}</td>
                     <td className="p-3">{item.lifeSpan}</td>
                   </tr>
                 ))}
